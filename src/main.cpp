@@ -346,6 +346,7 @@ void setup() {
   Serial.print("Pripájam sa na WiFi...");
   // Pokúsiť sa pripojiť 10 raz pri inicializácii
   WiFi.begin(ssid, password);
+  
   wifiConnecting = true;  // Nastavenie stavu pripojenia na true
   lastWifiAttempt = millis();  // Uloženie času posledného pokusu
   
