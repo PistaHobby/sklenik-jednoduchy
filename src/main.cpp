@@ -34,9 +34,9 @@ bool wifiConnecting = false;
 // Relé piny motora
 const int motorPinOpen = 14;
 const int motorPinClose = 27;
-const long dlzkapulzurele = 1500; // Puly rele ms
+const long dlzkapulzurele = 500; // Puly rele ms
 const long maxcasmotora = 7000; // sekundy motoraot várania ms
-const long dlzkaInitPulzu = 4000; //dlzka init zatvarania ms
+const long dlzkaInitPulzu = 8000; //dlzka init zatvarania ms
 const long minPauza = 10000;  //min cas pauzy rele
 const long maxPauza = 600000; //max cas pauzy rele
 
@@ -292,6 +292,8 @@ unsigned int calculatePauseTime(double pidOutput, unsigned int minPause, unsigne
 
 
 void handleVentilation() {
+   //temperatures function
+   readAndPrintTemperatures();
   // daj temperaturu zo senzora
   sensors.requestTemperatures();
   inputTemperature = sensors.getTempCByIndex(0);
@@ -336,11 +338,49 @@ void handleData() {
   server.send(200, "application/json", jsonResponse);
 }
 
+void handleServerRequests(void *pvParameters) {
+  while (true) {
+    server.handleClient();
+    //>>> Non-blocking WiFi reconnect
+  if (WiFi.status() != WL_CONNECTED) {
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastWifiAttempt >= 60000) { // každých 60 sekúnd
+     Serial.println("Skúšam pripojiť WiFi na pozadí...");
+     WiFi.disconnect();  // čistý reštart WiFi
+      WiFi.begin(ssid, password);
+      wifiConnecting = true;
+      lastWifiAttempt = currentMillis;
+    }
+  } else {
+    if (wifiConnecting) {
+      Serial.println("WiFi pripojené! IP: " + WiFi.localIP().toString());
+      wifiConnecting = false;
+    }
+  }
+
+    delay(10); // krátke oneskorenie pre stabilitu
+  }
+}
+
+void handleServerRequest(void *pvParameters) {
+  while (true) {
+    Serial.println("Task1 bezi na Core 0");
+    delay(10);
+  }
+}
+
+void handleVentilation(void *pvParameters) {
+  while (true) {
+    Serial.println("handleVentilation bezi na Core 1");
+    delay(10);
+  }
+} 
 
 void setup() {
   Serial.begin(115200);
   pinMode(motorPinOpen, OUTPUT);
   pinMode(motorPinClose, OUTPUT);
+  
   int maxAttempts = 10;  // Maximálny počet pokusov o pripojenie pri starte
   int attempts = 0;      // Počítadlo pokusov
   Serial.print("Pripájam sa na WiFi...");
@@ -367,35 +407,36 @@ void setup() {
   setpoint = temperatureThreshold;
   ventilationPID.SetMode(AUTOMATIC);
   ventilationPID.SetOutputLimits(-10, 10);
+  // Task1 na jadre 0
+
+  xTaskCreatePinnedToCore(
+    handleServerRequests,          // funkcia
+    "Task1",        // názov
+    15000,          // stack veľkosť
+    NULL,           // parameter
+    1,              // priorita
+    NULL,           // handle
+    0);             // core 0
+
+  // Task2 na jadre 1
+  xTaskCreatePinnedToCore(
+    handleVentilation,
+    "Task2",
+    10000,
+    NULL,
+    1,
+    NULL,
+    1);       
+    
+    // core 1
+
 }
 
 
 void loop() {
   
 
-  //temperatures function
-  readAndPrintTemperatures();
-  //Ventilation handle function
-  handleVentilation();
-  server.handleClient();
-
-   //>>> Non-blocking WiFi reconnect
-  if (WiFi.status() != WL_CONNECTED) {
-    unsigned long currentMillis = millis();
-    if (currentMillis - lastWifiAttempt >= 60000) { // každých 60 sekúnd
-     Serial.println("Skúšam pripojiť WiFi na pozadí...");
-     WiFi.disconnect();  // čistý reštart WiFi
-      WiFi.begin(ssid, password);
-      wifiConnecting = true;
-      lastWifiAttempt = currentMillis;
-    }
-  } else {
-    if (wifiConnecting) {
-      Serial.println("WiFi pripojené! IP: " + WiFi.localIP().toString());
-      wifiConnecting = false;
-    }
-  }
-
+   
   
   
 }
