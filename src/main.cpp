@@ -6,6 +6,13 @@
 #include <WiFiClient.h> 
 #include <WebServer.h>
 #include <ArduinoJson.h>
+#include <blynk.h>
+
+
+#define BLYNK_TEMPLATE_ID "TMPL4PdcY37v3"
+#define BLYNK_TEMPLATE_NAME "sklenik"
+#define BLYNK_AUTH_TOKEN "Xnvt-5vCPKuLKvOpz2tac3ptMTPPTy6X"
+
 
 
 // DS18B20 senzory
@@ -83,6 +90,13 @@ String ventilationDirection = "Stopped";
 float temperatureThreshold = 27.0;
 float temperatureC = 0.0; // Global variable for the first sensor temperature
 float temperatureC2 = 0.0;
+
+void myTimer() 
+{
+  Blynk.Write(V0, temperatureC);  
+  Blynk.Write(V1, temperatureC2);
+  
+}
 
 
 void ventilatioStateMachine() {
@@ -401,6 +415,12 @@ void setup() {
   sensors.begin();
   sensors2.begin();
   Serial.println("DS18B20 senzory inicializované.");
+  Blynk.begin 
+  // Setting interval to send data to Blynk Cloud to 1000ms. 
+  // It means that data will be sent every second
+  timer.setInterval(100000L, myTimer); 
+
+
 
   Serial.println("ESP32 pripravené, PID vetranie spustené.");
 
@@ -436,7 +456,34 @@ void setup() {
 void loop() {
   
 
-   
+  //temperatures function
+  readAndPrintTemperatures();
+  //Ventilation handle function
+  handleVentilation();
+  server.handleClient();
+
+   //>>> Non-blocking WiFi reconnect
+  if (WiFi.status() != WL_CONNECTED) {
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastWifiAttempt >= 60000) { // každých 60 sekúnd
+     Serial.println("Skúšam pripojiť WiFi na pozadí...");
+     WiFi.disconnect();  // čistý reštart WiFi
+      WiFi.begin(ssid, password);
+      wifiConnecting = true;
+      lastWifiAttempt = currentMillis;
+    }
+  } else {
+    if (wifiConnecting) {
+      Serial.println("WiFi pripojené! IP: " + WiFi.localIP().toString());
+      wifiConnecting = false;
+    }
+  }
+
+  // Runs all Blynk stuff
+  Blynk.run(); 
+  
+  // runs BlynkTimer
+  timer.run(); 
   
   
 }
