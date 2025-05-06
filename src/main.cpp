@@ -34,9 +34,9 @@ bool wifiConnecting = false;
 // Relé piny motora
 const int motorPinOpen = 14;
 const int motorPinClose = 27;
-const long dlzkapulzurele = 1500; // Puly rele ms
+const long dlzkapulzurele = 1600; // Puly rele ms
 const long maxcasmotora = 7000; // sekundy motoraot várania ms
-const long dlzkaInitPulzu = 4000; //dlzka init zatvarania ms
+const long dlzkaInitPulzu = 7000; //dlzka init zatvarania ms
 const long minPauza = 10000;  //min cas pauzy rele
 const long maxPauza = 600000; //max cas pauzy rele
 
